@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlexFlow · Style-specific Accompaniment Generation via Constrained Discrete Optimization</title>
+<meta name="description" content="Listening examples for FlexFlow, style-specific accompaniment generation without training (SMC 2026).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Academic project-page style: white page, centred single column, black type, dark pill buttons. */
+:root{
+  --ink:#363636; --strong:#111; --muted:#6b6b6b; --line:#e5e5e5; --bg:#fff; --soft:#f5f5f5;
+  --link:#3273dc; --btn:#363636;
+  --hc:#2f8a62; --am:#4f78a8; --wsg:#8360b3; --ff:#e8710a; --fftint:#fff6ec; --ffedge:#f3cfa3;
+  --font:"Noto Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#d6d6d6; --strong:#f2f2f2; --muted:#9a9a9a; --line:#2e2e2e; --bg:#141414; --soft:#1e1e1e;
+    --link:#7aa7f0; --btn:#e8e8e8; --fftint:#2a1e12; --ffedge:#5c3a17; color-scheme:dark;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);color:var(--ink);background:var(--bg);font-size:16px;line-height:1.6}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.narrow{max-width:820px}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+
+/* top navigation */
+html{scroll-behavior:smooth}
+.topnav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.topnav .wrap{display:flex;justify-content:space-between;align-items:center;min-height:52px;gap:16px}
+.brand{font-weight:700;color:var(--strong)}
+.brand:hover{text-decoration:none}
+.links{display:flex;gap:24px;font-size:15px}
+.links a{color:var(--ink)}
+.links a:hover{color:var(--link);text-decoration:none}
+section{scroll-margin-top:52px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media (max-width:560px){.links{gap:14px;font-size:14px}.brand{display:none}.topnav .wrap{justify-content:center}}
+
+/* header */
+.brandline{font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ff);margin-bottom:10px}
+header{padding-block:56px 8px;text-align:center}
+h1{font-size:clamp(28px,5vw,42px);font-weight:600;color:var(--strong);line-height:1.2;text-wrap:balance}
+.authors{margin-top:18px;font-size:19px;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 22px}
+.aff{margin-top:8px;font-size:16px;color:var(--ink);display:flex;flex-direction:column;gap:2px;text-wrap:balance}
+.authors sup,.aff sup{font-size:.65em;margin-left:1px}
+.aff sup{margin-right:2px}
+.venue{margin-top:6px;font-size:17px;font-weight:600;color:var(--strong)}
+.btns{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:20px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--btn);color:var(--bg);border-radius:999px;padding:8px 18px;font-size:15px}
+.btn:hover{text-decoration:none;opacity:.88}
+.btn svg{width:16px;height:16px;fill:currentColor}
+
+/* sections */
+section{padding-block:40px}
+h2{font-size:30px;font-weight:600;color:var(--strong);text-align:center;margin-bottom:16px}
+.lead{text-align:justify;hyphens:auto;-webkit-hyphens:auto;margin:0 auto 22px;max-width:820px}
+.tldr{text-align:center;font-size:18px;margin-top:28px}
+
+/* tabs */
+.tabs{display:flex;flex-wrap:wrap;justify-content:center;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tab{font:inherit;font-size:15px;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 16px;color:var(--ink);cursor:pointer;line-height:1.35}
+.tab:hover{border-bottom-color:var(--muted)}
+.tab[aria-selected="true"]{color:var(--link);border-bottom-color:var(--link);font-weight:600}
+.tab small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.hint{text-align:center;margin-bottom:20px}
+.hint b{color:var(--strong)}
+
+/* videos */
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.clip{min-width:0;text-align:center}
+.clip .who{font-weight:600;color:var(--strong);margin-bottom:8px;font-size:15px}
+.clip .who span{font-weight:400;color:var(--muted);font-size:14px}
+.clip.ff video{outline:3px solid var(--ff);outline-offset:-1px}
+video{display:block;width:100%;border-radius:6px;background:#000}
+.wide video{background:#fff;border:1px solid var(--line)}
+.cap{text-align:center;font-size:14px;color:var(--muted);margin-top:10px}
+
+/* study table */
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:15px;min-width:760px}
+th{font-weight:600;color:var(--strong);padding:10px;border-bottom:2px solid var(--ink);text-align:left;white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line)}
+td.id{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.ffc,th.ffh{background:var(--fftint)}
+.player{display:flex;align-items:center;gap:8px}
+.pb{flex:none;width:28px;height:28px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;color:#fff}
+.pb svg{width:11px;height:11px;fill:currentColor}
+.bar{flex:1;height:4px;border-radius:2px;background:var(--line);position:relative;cursor:pointer;min-width:40px}
+.bar i{position:absolute;inset:0 auto 0 0;width:0;border-radius:2px}
+.t{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:32px;text-align:right}
+.missing .t{color:#d64545}
+
+/* bibtex */
+pre{background:var(--soft);border-radius:6px;padding:16px 18px;font-size:13px;line-height:1.55;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ink)}
+.bibhead{text-align:left}
+footer{padding-block:28px 44px;text-align:center;font-size:14px;color:var(--muted)}
+
+@media (max-width:760px){
+  .trio{grid-template-columns:1fr}
+  .lead{text-align:left}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav"><div class="wrap">
+  <a class="brand" href="#top">FlexFlow</a>
+  <div class="links">
+    <a href="#structure">Section structure</a>
+    <a href="#styles">Styles</a>
+    <a href="#study">Compare methods</a>
+  </div>
+</div></nav>
+
+<header id="top"><div class="wrap">
+  <div class="brandline">FlexFlow</div>
+  <h1>Style-specific Accompaniment Generation via Constrained Discrete Optimization</h1>
+  <div class="authors">
+    <span>Stephanie Y. H. Lew<sup>1</sup></span>
+    <span>Wee Kheng Leow<sup>2</sup></span>
+    <span>Kat R. Agres<sup>3</sup></span>
+  </div>
+  <div class="aff">
+    <div><sup>1,2</sup>Department of Computer Science, National University of Singapore, Singapore</div>
+    <div><sup>3</sup>Centre for Music and Health, Yong Siew Toh Conservatory of Music, National University of Singapore, Singapore</div>
+  </div>
+  <div class="venue">SMC 2026, Zagreb</div>
+  <div class="btns">
+    <a class="btn" href="https://www.comp.nus.edu.sg/~leowwk/papers/smc2026.pdf">
+      <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6zM14 3v5h5M9 13h7v1.6H9zm0 3.4h7V18H9z"/></svg>Paper</a>
+    <!-- <a class="btn" href="poster.pdf">Poster</a> -->
+  </div>
+</div></header>
+
+<section id="abstract"><div class="wrap">
+  <h2>Abstract</h2>
+  <p class="lead">Style-specific accompaniment generation aims to produce accompaniment for a given melody in a target style. Despite the success of recent methods like deep neural networks (DNNs) and hidden Markov models, they have several shortcomings. To adapt to different styles, they require separate training on style-specific datasets, increasing total training time. Training on mixed-style datasets can result in diluted, inconsistent outputs. Moreover, they cannot handle section closure and global music structure effectively. The proposed method, FlexFlow, overcomes the shortcomings of existing methods by formulating style-specific accompaniment generation as a constrained discrete optimization problem. It defines style as the pitch progression in user-specified reference phrases, enabling adaptation to any target style expressed in those references. It can generate accompaniment with as little as one reference phrase. It adopts a training-free approach that adjusts individual pitches to satisfy chord constraints while preserving pitch direction and pitch difference of reference phrases. It can handle section closure, contrast and phrase repetition to match the structure of full-length melodies. Performance tests and a user study indicate that FlexFlow’s accompaniments are more harmonious than those of comparable DNNs and its quality is closer to human-composed accompaniments compared to that of DNNs.</p>
+</div></section>
+
+<section id="structure"><div class="wrap">
+  <h2>Section Structure</h2>
+  <p class="lead">Choose an aspect, then compare AccoMontage (AM), Whole Song Generation (WSG) and FlexFlow (FF1) on the same melody. Starting one video pauses the others.</p>
+  <div class="tabs" role="tablist" id="aspectTabs"></div>
+  <p class="hint"><b>Listen for:</b> <span id="aspectText"></span></p>
+  <div class="trio">
+    <div class="clip"><div class="who">AM <span>AccoMontage</span></div><video id="v_am" controls playsinline preload="metadata"></video></div>
+    <div class="clip"><div class="who">WSG <span>Whole Song Generation</span></div><video id="v_wsg" controls playsinline preload="metadata"></video></div>
+    <div class="clip ff"><div class="who">FF1 <span>FlexFlow (ours)</span></div><video id="v_ff" controls playsinline preload="metadata"></video></div>
+  </div>
+</div></section>
+
+<section id="styles"><div class="wrap">
+  <h2>One Melody, Many Styles</h2>
+  <p class="lead">FlexFlow (FF1) accompanies the same melody four times, each time with a different reference phrase. Choose a reference to hear its version.</p>
+  <div class="tabs" role="tablist" id="styleTabs"></div>
+  <div class="wide"><video id="v_style" controls playsinline preload="metadata"></video></div>
+  <p class="cap">Each video highlights its reference phrase; the other three stay greyed out.</p>
+</div></section>
+
+<section id="study"><div class="wrap">
+  <h2>Compare Methods</h2>
+  <p class="lead">Hear four accompaniments for the same melody: human-composed (HC), AccoMontage (AM), Whole Song Generation (WSG) and FlexFlow (FF1). Play them in turn to compare how well each fits the melody and chords.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Melody</th><th>Human-composed</th><th>AM</th><th>WSG</th><th class="ffh">FF1 (ours)</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div></section>
+
+<section id="cite"><div class="wrap narrow">
+  <h2 class="bibhead">BibTeX</h2>
+  <!-- TODO: replace with the official BibTeX once the proceedings are out -->
+  <pre>@inproceedings{lew2026flexflow,
+  title     = {Style-specific Accompaniment Generation via Constrained Discrete Optimization},
+  author    = {Lew, Stephanie Y. H. and Leow, Wee Kheng and Agres, Kat R.},
+  booktitle = {Proceedings of the Sound and Music Computing Conference (SMC)},
+  year      = {2026}
+}</pre>
+</div></section>
+
+<footer><div class="wrap">All methods rendered with the same piano sound. © 2026 Stephanie Y. H. Lew</div></footer>
+
+<script>
+/* ---------- content: edit here ---------- */
+const ASPECTS = [
+  { key: "consistency", name: "Section consistency",
+    text: "does the second phrase keep the accompaniment style of the first, so the two phrases sound like a single section?" },
+  { key: "contrast", name: "Section contrast",
+    text: "does the accompaniment change when a new section starts?" },
+  { key: "closure", name: "Section closure",
+    text: "is the last accompaniment note held as long as the melody's last note?" },
+];
+const STYLES = [
+  { file: "ff_green", name: "Greensleeves", by: "Traditional" },
+  { file: "ff_moz",   name: "Piano Sonata No. 16", by: "Mozart" },
+  { file: "ff_bach",  name: "Prelude in C major", by: "Bach" },
+  { file: "ff_jobim", name: "The Girl from Ipanema", by: "Jobim" },
+];
+const SONGS = ["0088","0108","0235","0356","0523","0539","0675","0714","0781","0812"];
+const METHODS = [ // column order; code = the method part of the filename
+  { code: "HC1.0",  label: "Human-composed", color: "var(--hc)" },
+  { code: "AM1.0",  label: "AM",             color: "var(--am)" },
+  { code: "WSG1.0", label: "WSG",            color: "var(--wsg)" },
+  { code: "FF1.0",  label: "FF1 (ours)",     color: "var(--ff)", ff: true },
+];
+const audioFile = (song, code) => `audio/study/${song}_${code}_8b_aft_ref.mp3`;
+/* ---------------------------------------- */
+
+const PLAY = '<svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg>';
+const PAUSE = '<svg viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z"/></svg>';
+
+// only one video or clip plays at a time
+document.addEventListener("play", e => {
+  document.querySelectorAll("audio, video").forEach(m => { if (m !== e.target) m.pause(); });
+}, true);
+
+function makeTabs(el, items, labelFn, onSelect) {
+  items.forEach((it, i) => {
+    const b = document.createElement("button");
+    b.className = "tab"; b.type = "button"; b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", i === 0 ? "true" : "false");
+    b.innerHTML = labelFn(it);
+    b.addEventListener("click", () => {
+      el.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", "false"));
+      b.setAttribute("aria-selected", "true");
+      onSelect(it);
+    });
+    el.appendChild(b);
+  });
+  onSelect(items[0]);
+}
+
+makeTabs(document.getElementById("aspectTabs"), ASPECTS, a => a.name, a => {
+  document.getElementById("aspectText").textContent = a.text;
+  for (const m of ["am", "wsg", "ff"]) document.getElementById("v_" + m).src = `video/section_${a.key}_${m}.mp4`;
+});
+
+makeTabs(document.getElementById("styleTabs"), STYLES, s => `${s.name}<small>${s.by}</small>`, s => {
+  document.getElementById("v_style").src = `video/${s.file}.mp4`;
+});
+
+const fmt = t => isFinite(t) ? `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}` : "–:––";
+const rows = document.getElementById("rows");
+SONGS.forEach(song => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td class="id">${song}</td>`;
+  METHODS.forEach(m => {
+    const td = document.createElement("td");
+    if (m.ff) td.className = "ffc";
+    td.innerHTML = `<div class="player">
+        <button class="pb" type="button" style="background:${m.color}" aria-label="Play ${m.label}, melody ${song}">${PLAY}</button>
+        <div class="bar"><i style="background:${m.color}"></i></div>
+        <span class="t">–:––</span>
+      </div>`;
+    const a = new Audio(); a.preload = "metadata"; a.src = audioFile(song, m.code);
+    const btn = td.querySelector(".pb"), fill = td.querySelector(".bar i"),
+          bar = td.querySelector(".bar"), time = td.querySelector(".t");
+    btn.addEventListener("click", () => a.paused ? a.play() : a.pause());
+    a.addEventListener("play", () => { btn.innerHTML = PAUSE; });
+    a.addEventListener("pause", () => { btn.innerHTML = PLAY; });
+    a.addEventListener("loadedmetadata", () => { time.textContent = fmt(a.duration); });
+    a.addEventListener("timeupdate", () => {
+      fill.style.width = (a.currentTime / a.duration * 100 || 0) + "%";
+      time.textContent = fmt(a.currentTime > 0 ? a.currentTime : a.duration);
+    });
+    a.addEventListener("ended", () => { a.currentTime = 0; fill.style.width = "0"; });
+    a.addEventListener("error", () => { td.classList.add("missing"); time.textContent = "missing"; btn.disabled = true; });
+    bar.addEventListener("click", e => {
+      if (!isFinite(a.duration)) return;
+      const r = bar.getBoundingClientRect();
+      a.currentTime = (e.clientX - r.left) / r.width * a.duration;
+    });
+    a.hidden = true; document.body.appendChild(a);
+    tr.appendChild(td);
+  });
+  rows.appendChild(tr);
+});
+</script>
+</body>
+</html>
